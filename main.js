@@ -249,12 +249,12 @@
       });
 
       // enlace activo según la sección
-      ['formatos', 'ocasiones', 'repertorio', 'precio', 'preguntas'].forEach((id) => {
+      ['videos', 'formatos', 'ocasiones', 'repertorio', 'precio', 'preguntas'].forEach((id) => {
         const sec = document.getElementById(id);
         const link = $(`.nav__links a[href="#${id}"]`);
         if (!sec || !link) return;
         ScrollTrigger.create({
-          trigger: sec, start: 'top 55%', end: 'bottom 55%',
+          trigger: sec, start: 'top 55%', end: 'bottom 55%', refreshPriority: -1, // se mide después de los pines (escenario) para no desfasarse
           onToggle: (self) => link.classList.toggle('is-active', self.isActive),
         });
       });
@@ -525,6 +525,61 @@
         .to(wr, { xPercent: 42, opacity: 0, duration: 0.85 }, 0)
         .to(caption, { opacity: 1, y: 0, duration: 0.32, ease: 'power2.out' }, 0.72)
         .to({}, { duration: 0.22 });
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     8b. VIDEOS: reproductor en ventana (el video se descarga solo al tocarlo)
+  ------------------------------------------------------------------ */
+  function initVideos() {
+    const cards = $$('.vcard');
+    const modal = $('#vmodal');
+    const video = $('#vmodalVideo');
+    // sin <dialog> los enlaces abren el .mp4 en otra pestaña
+    if (!cards.length || !modal || !video || typeof modal.showModal !== 'function') return;
+
+    let opener = null;
+    let locked = false;
+
+    const lock = () => {
+      locked = true;
+      document.body.style.overflow = 'hidden';
+      if (lenis) lenis.stop();
+    };
+    const unlock = () => {
+      if (!locked) return;
+      locked = false;
+      document.body.style.overflow = '';
+      if (lenis && !document.body.classList.contains('is-loading')) lenis.start();
+    };
+    const close = () => { if (modal.open) modal.close(); };
+
+    cards.forEach((card) => {
+      card.addEventListener('click', (e) => {
+        e.preventDefault();
+        opener = card;
+        video.style.setProperty('--ar', (Number(card.dataset.w) / Number(card.dataset.h)).toFixed(4));
+        video.poster = $('img', card).currentSrc || $('img', card).src;
+        video.src = card.getAttribute('href');
+        lock();
+        modal.showModal();
+        video.play().catch(() => { /* si el navegador lo impide, el usuario toca play en los controles */ });
+      });
+    });
+
+    $('#vmodalClose').addEventListener('click', close);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal || e.target.classList.contains('vmodal__box')) close();
+      // el botón "Quiero este show..." cierra la ventana y deja que el ancla lleve al formulario
+      if (e.target.closest('.vmodal__cta')) { opener = null; close(); unlock(); }
+    });
+    modal.addEventListener('close', () => {
+      video.pause();
+      video.removeAttribute('src');
+      video.removeAttribute('poster');
+      video.load(); // corta la descarga
+      unlock();
+      if (opener) opener.focus({ preventScroll: true });
     });
   }
 
@@ -875,7 +930,7 @@
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => e.target.classList.toggle('is-offscreen', !e.isIntersecting));
     }, { rootMargin: '120px 0px' });
-    $$('.hero, .stage, .occasions, .repertoire, .price, .faq, .contact, .footer').forEach((el) => io.observe(el));
+    $$('.hero, .stage, .videos, .occasions, .repertoire, .price, .faq, .contact, .footer').forEach((el) => io.observe(el));
   }
 
   /* ------------------------------------------------------------------
@@ -892,6 +947,7 @@
     initMarquee();
     initManifesto();
     initStage();
+    initVideos();
     initFormats();
     initSpotlight();
     initRepertoire();
