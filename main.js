@@ -803,6 +803,8 @@
       lines.push(`Evento: ${d.evento}`);
       if (d.formato) lines.push(`Formato: ${d.formato}`);
       if (d.fecha) lines.push(`Fecha: ${new Date(`${d.fecha}T12:00:00`).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}`);
+      if (d.hora) lines.push(`Hora del evento: ${new Date(`2000-01-01T${d.hora}`).toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit', hour12: true })}`);
+      if (d.duracion) lines.push(`Duración: ${d.duracion}`);
       if (d.lugar.trim()) lines.push(`Lugar: ${d.lugar.trim()}`);
       if (d.canciones.trim()) lines.push(`Canciones: ${d.canciones.trim()}`);
       return lines.join('\n');
